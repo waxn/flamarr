@@ -1,45 +1,7 @@
 'use strict';
 
-// ── Avatar generation ────────────────────────────────
-
-const AVATAR_COLORS = [
-  '#10b981','#06b6d4','#6366f1','#f59e0b',
-  '#ec4899','#8b5cf6','#14b8a6','#f97316',
-];
-
-function avatarColor(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
-
-function isEmoji(str) {
-  // rough check: short string with no http and looks like emoji/symbol
-  return str.length <= 4 && !/https?:\/\//.test(str);
-}
-
-function renderIcon(el, name, icon) {
-  if (!el) return;
-  const color = avatarColor(name);
-  if (!icon) {
-    el.style.background = color + '22';
-    el.innerHTML = `<span style="color:${color};font-size:inherit;font-weight:700;line-height:1">${name.charAt(0).toUpperCase()}</span>`;
-  } else if (isEmoji(icon)) {
-    el.style.background = color + '18';
-    el.innerHTML = `<span style="font-size:inherit;line-height:1">${icon}</span>`;
-  } else {
-    el.style.background = 'transparent';
-    el.innerHTML = `<img src="${icon}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span style=color:${color};font-weight:700>${name.charAt(0).toUpperCase()}</span>';this.parentElement.style.background='${color}22'" />`;
-  }
-}
-
 function initIcons() {
-  document.querySelectorAll('.service-icon[data-name]').forEach(el => {
-    renderIcon(el, el.dataset.name, el.dataset.icon || '');
-  });
-  document.querySelectorAll('.bookmark-icon[data-name]').forEach(el => {
-    renderIcon(el, el.dataset.name, el.dataset.icon || '');
-  });
+  // Intentionally empty: the UI is text-only now.
 }
 
 // ── Search ───────────────────────────────────────────
@@ -97,41 +59,7 @@ function openModal(item = null) {
   descInput().value = item?.desc || '';
 
   overlay().classList.add('open');
-  setupFaviconFetch();
   setTimeout(() => nameInput().focus(), 50);
-}
-
-// Try to fetch favicon from a URL and return as data URL
-async function fetchFavicon(url) {
-  try {
-    const baseUrl = new URL(url).origin;
-    const faviconUrl = baseUrl + '/favicon.ico';
-    const response = await fetch(faviconUrl, { mode: 'no-cors' });
-    if (response.ok) {
-      const blob = await response.blob();
-      return new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch (e) {
-    // favicon fetch failed, that's ok
-  }
-  return null;
-}
-
-// Set up auto-fetch favicon when URL changes (for service type only)
-function setupFaviconFetch() {
-  urlInput().addEventListener('blur', async () => {
-    if (selectedType() !== 'service') return;
-    const url = urlInput().value.trim();
-    if (!url || iconInput().value.trim()) return; // don't overwrite if already has icon
-    const favicon = await fetchFavicon(url);
-    if (favicon) {
-      iconInput().value = favicon;
-    }
-  });
 }
 
 function closeModal() {
@@ -199,6 +127,11 @@ function init() {
   document.getElementById('openModal')?.addEventListener('click', () => openModal());
   document.getElementById('closeModal')?.addEventListener('click', closeModal);
   document.getElementById('saveBtn')?.addEventListener('click', saveItem);
+  document.getElementById('saveBtn')?.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+    }
+  });
 
   // Overlay click-outside
   overlay()?.addEventListener('click', e => { if (e.target === overlay()) closeModal(); });
@@ -238,6 +171,11 @@ function init() {
   // Keyboard shortcuts: S = add Service, B = add Bookmark, N/A = open (default Service)
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeModal(); return; }
+    if (e.key === 'Enter' && overlay().classList.contains('open')) {
+      e.preventDefault();
+      saveItem();
+      return;
+    }
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
     const k = e.key.toLowerCase();
@@ -267,12 +205,6 @@ function init() {
       return;
     }
 
-    if (e.key === 'Enter' && overlay().classList.contains('open')) {
-      if (document.activeElement !== document.getElementById('saveBtn')) {
-        e.preventDefault();
-        saveItem();
-      }
-    }
   });
 }
 
