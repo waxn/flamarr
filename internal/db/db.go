@@ -88,6 +88,33 @@ func (db *DB) GetUserByUsername(username string) (*User, error) {
 	return u, err
 }
 
+func (db *DB) GetAllUsers() ([]User, error) {
+	rows, err := db.Query(`SELECT id, username, password_hash, created_at FROM users`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+func (db *DB) UpdatePassword(id int64, passwordHash string) error {
+	_, err := db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, passwordHash, id)
+	return err
+}
+
+func (db *DB) UpdateUsername(id int64, username string) error {
+	_, err := db.Exec(`UPDATE users SET username = ? WHERE id = ?`, username, id)
+	return err
+}
+
 func (db *DB) GetItems() ([]Item, error) {
 	rows, err := db.Query(`SELECT id, name, url, icon, description, type, position, created_at FROM items ORDER BY type, position, id`)
 	if err != nil {

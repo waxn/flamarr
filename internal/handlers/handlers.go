@@ -39,7 +39,7 @@ func New(database *db.DB, webFS embed.FS) *Handler {
 }
 
 func (h *Handler) loadTemplates() {
-	pages := []string{"setup", "login", "dashboard"}
+	pages := []string{"setup", "login", "dashboard", "forgot_password", "forgot_username"}
 	for _, p := range pages {
 		t := template.Must(template.ParseFS(h.webFS,
 			"web/templates/layout.html",
@@ -192,6 +192,88 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(30 * 24 * time.Hour),
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// Forgot password: allow resetting password by providing username
+
+type forgotPasswordData struct {
+	Error string
+}
+
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	h.render(w, "forgot_password", forgotPasswordData{})
+}
+
+func (h *Handler) HandleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+	confirm := r.FormValue("confirm")
+	if password == "" || password != confirm {
+		h.render(w, "forgot_password", forgotPasswordData{Error: "Passwords must match and not be empty."})
+		return
+	}
+	user, err := h.db.GetUserByUsername(username)
+	if err != nil || user == nil {
+		h.render(w, "forgot_password", forgotPasswordData{Error: "Unknown username."})
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		h.render(w, "forgot_password", forgotPasswordData{Error: "Internal error."})
+		return
+	}
+	if err := h.db.UpdatePassword(user.ID, string(hash)); err != nil {
+		h.render(w, "forgot_password", forgotPasswordData{Error: "Could not update password."})
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusFound)
+}
+
+// Forgot username: allow changing username if you know the password
+
+type forgotUsernameData struct {
+	Error string
+}
+
+func (h *Handler) ForgotUsername(w http.ResponseWriter, r *http.Request) {
+	h.render(w, "forgot_username", forgotUsernameData{})
+}
+
+func (h *Handler) HandleForgotUsername(w http.ResponseWriter, r *http.Request) {
+	password := r.FormValue("password")
+	newUsername := r.FormValue("username")
+	confirm := r.FormValue("confirm")
+	if newUsername == "" || newUsername != confirm {
+		h.render(w, "forgot_username", forgotUsernameData{Error: "Usernames must match and not be empty."})
+		return
+	}
+	users, err := h.db.GetAllUsers()
+	if err != nil {
+		h.render(w, "forgot_username", forgotUsernameData{Error: "Internal error."})
+		return
+	}
+	var matched *db.User
+	for _, u := range users {
+		if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) == nil {
+			matched = &u
+			break
+		}
+	}
+	if matched == nil {
+		h.render(w, "forgot_username", forgotUsernameData{Error: "No user matches that password."})
+		return
+	}
+	// check new username availability
+	existing, err := h.db.GetUserByUsername(newUsername)
+	if err == nil && existing != nil && existing.ID != matched.ID {
+		h.render(w, "forgot_username", forgotUsernameData{Error: "Username already taken."})
+		return
+	}
+	if err := h.db.UpdateUsername(matched.ID, newUsername); err != nil {
+		h.render(w, "forgot_username", forgotUsernameData{Error: "Could not update username."})
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {

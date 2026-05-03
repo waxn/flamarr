@@ -107,10 +107,14 @@ function closeModal() {
 
 async function saveItem() {
   const name = nameInput().value.trim();
-  const url  = urlInput().value.trim();
+  let url  = urlInput().value.trim();
   if (!name || !url) {
     nameInput().focus();
     return;
+  }
+  // Ensure URL has a scheme so clicking opens the external site directly
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url)) {
+    url = 'https://' + url;
   }
   const body = {
     name,
@@ -197,19 +201,39 @@ function init() {
     }
   });
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: S = add Service, B = add Bookmark, N/A = open (default Service)
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); return; }
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.key === 'a' || e.key === 'A' || e.key === 'n' || e.key === 'N') {
+
+    const k = e.key.toLowerCase();
+
+    const setType = t => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector(`.type-btn[data-type="${t}"]`);
+      if (btn) btn.classList.add('active');
+    };
+
+    if (k === 's') {
+      e.preventDefault();
+      openModal();
+      setType('service');
+      return;
+    }
+    if (k === 'b') {
+      e.preventDefault();
+      openModal();
+      setType('bookmark');
+      return;
+    }
+    if (k === 'n' || k === 'a') {
       if (!overlay().classList.contains('open')) {
         e.preventDefault();
         openModal();
+        setType('service');
       }
     }
-  });
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); return; }
     if (e.key === 'Enter' && overlay().classList.contains('open')) {
       if (document.activeElement !== document.getElementById('saveBtn')) {
         e.preventDefault();

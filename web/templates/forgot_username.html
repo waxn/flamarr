@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-mark">f</span>
+      <span class="logo-text">flamarr</span>
+    </div>
+    {{if .Error}}<div class="auth-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/forgot-username" class="auth-form">
+      <div class="field">
+        <label for="password">Current password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="your current password" />
+      </div>
+      <div class="field">
+        <label for="username">New username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required placeholder="new username" />
+      </div>
+      <div class="field">
+        <label for="confirm">Confirm username</label>
+        <input id="confirm" name="confirm" type="text" autocomplete="username" required placeholder="confirm new username" />
+      </div>
+      <button type="submit" class="btn-primary">Change username</button>
+    </form>
+    <div style="margin-top:12px;text-align:center;"><a href="/login">Back to sign in</a></div>
+  </div>
+</div>
+{{end}}

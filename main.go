@@ -46,6 +46,12 @@ func main() {
 	mux.HandleFunc("POST /login", h.HandleLogin)
 	mux.HandleFunc("POST /logout", h.HandleLogout)
 
+	// Forgot password / username (public)
+	mux.HandleFunc("GET /forgot-password", h.ForgotPassword)
+	mux.HandleFunc("POST /forgot-password", h.HandleForgotPassword)
+	mux.HandleFunc("GET /forgot-username", h.ForgotUsername)
+	mux.HandleFunc("POST /forgot-username", h.HandleForgotUsername)
+
 	mux.Handle("GET /{$}", h.AuthMiddleware(http.HandlerFunc(h.Dashboard)))
 	mux.Handle("GET /api/items", h.AuthMiddleware(http.HandlerFunc(h.GetItems)))
 	mux.Handle("POST /api/items", h.AuthMiddleware(http.HandlerFunc(h.CreateItem)))
