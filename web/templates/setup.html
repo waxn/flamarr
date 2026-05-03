@@ -1,0 +1,23 @@
+{{define "content"}}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-mark">f</span>
+      <span class="logo-text">flamarr</span>
+    </div>
+    <p class="auth-sub">Create your account to get started.</p>
+    {{if .Error}}<div class="auth-error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/setup" class="auth-form">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" autofocus required placeholder="you" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn-primary">Create account</button>
+    </form>
+  </div>
+</div>
+{{end}}

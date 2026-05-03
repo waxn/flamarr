@@ -1,0 +1,16 @@
+services:
+  flamarr:
+    image: flamarr:latest
+    build: .
+    container_name: flamarr
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    volumes:
+      - flamarr_data:/data
+    environment:
+      - PORT=5005
+      - DATA_DIR=/data
+
+volumes:
+  flamarr_data:
