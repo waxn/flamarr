@@ -97,7 +97,41 @@ function openModal(item = null) {
   descInput().value = item?.desc || '';
 
   overlay().classList.add('open');
+  setupFaviconFetch();
   setTimeout(() => nameInput().focus(), 50);
+}
+
+// Try to fetch favicon from a URL and return as data URL
+async function fetchFavicon(url) {
+  try {
+    const baseUrl = new URL(url).origin;
+    const faviconUrl = baseUrl + '/favicon.ico';
+    const response = await fetch(faviconUrl, { mode: 'no-cors' });
+    if (response.ok) {
+      const blob = await response.blob();
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch (e) {
+    // favicon fetch failed, that's ok
+  }
+  return null;
+}
+
+// Set up auto-fetch favicon when URL changes (for service type only)
+function setupFaviconFetch() {
+  urlInput().addEventListener('blur', async () => {
+    if (selectedType() !== 'service') return;
+    const url = urlInput().value.trim();
+    if (!url || iconInput().value.trim()) return; // don't overwrite if already has icon
+    const favicon = await fetchFavicon(url);
+    if (favicon) {
+      iconInput().value = favicon;
+    }
+  });
 }
 
 function closeModal() {
@@ -227,11 +261,10 @@ function init() {
       return;
     }
     if (k === 'n' || k === 'a') {
-      if (!overlay().classList.contains('open')) {
-        e.preventDefault();
-        openModal();
-        setType('service');
-      }
+      e.preventDefault();
+      openModal();
+      setType('service');
+      return;
     }
 
     if (e.key === 'Enter' && overlay().classList.contains('open')) {

@@ -79,6 +79,16 @@ html, body {
   font-size: 13px;
 }
 
+.auth-card > div[style*="margin-top"] a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.auth-card > div[style*="margin-top"] a:hover {
+  opacity: 0.8;
+}
+
 /* ── Logo ─────────────────────────────────────────── */
 
 .logo-mark {
