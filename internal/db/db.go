@@ -31,12 +31,22 @@ type Item struct {
 }
 
 func Init(path string) (*DB, error) {
-	conn, err := sql.Open("sqlite", path+"?_journal_mode=WAL&_foreign_keys=on")
+	conn, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}
 	if err := conn.Ping(); err != nil {
 		return nil, fmt.Errorf("ping: %w", err)
+	}
+	for _, pragma := range []string{
+		`PRAGMA journal_mode=WAL`,
+		`PRAGMA foreign_keys=ON`,
+		`PRAGMA busy_timeout=5000`,
+	} {
+		if _, err := conn.Exec(pragma); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("pragma: %w", err)
+		}
 	}
 	db := &DB{conn}
 	if err := db.migrate(); err != nil {
