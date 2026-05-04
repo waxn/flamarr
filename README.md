@@ -44,7 +44,43 @@ Environment variables (all optional):
 
 ---
 
-## Push to Docker Hub
+## Pull from Docker Hub
+
+The image is published at `waxn/flamarr`. To run without building locally:
+
+```bash
+docker run -d \
+  -p 5005:5005 \
+  -v flamarr_data:/data \
+  --name flamarr \
+  --restart unless-stopped \
+  waxn/flamarr:latest
+```
+
+Or with Compose, update `docker-compose.yml` to pull instead of build:
+
+```yaml
+services:
+  flamarr:
+    image: waxn/flamarr:latest
+    container_name: flamarr
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    volumes:
+      - flamarr_data:/data
+
+volumes:
+  flamarr_data:
+```
+
+Then:
+
+```bash
+docker compose up -d
+```
+
+## Build and push your own image
 
 ```bash
 docker build -t yourusername/flamarr:latest .
