@@ -447,6 +447,34 @@ html, body {
 
 .service-card:hover .card-actions { opacity: 1; }
 
+.drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  opacity: 0;
+  cursor: grab;
+  line-height: 1;
+  padding: 2px;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+.service-card:hover .drag-handle,
+.bookmark-card:hover .drag-handle { opacity: 1; }
+
+.service-card.dragging,
+.bookmark-card.dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+.service-card.drop-before { box-shadow: -3px 0 0 var(--accent); }
+.service-card.drop-after  { box-shadow:  3px 0 0 var(--accent); }
+.bookmark-card.drop-before { box-shadow: 0 -2px 0 var(--accent); }
+.bookmark-card.drop-after  { box-shadow: 0  2px 0 var(--accent); }
+
 .card-actions {
   position: absolute;
   top: 0;

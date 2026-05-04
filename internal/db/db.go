@@ -25,9 +25,16 @@ type Item struct {
 	URL         string    `json:"url"`
 	Icon        string    `json:"icon"`
 	Description string    `json:"description"`
+	Category    string    `json:"category"`
 	Type        string    `json:"type"` // "service" or "bookmark"
 	Position    int       `json:"position"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ReorderItem struct {
+	ID       int64  `json:"id"`
+	Position int    `json:"position"`
+	Type     string `json:"type"`
 }
 
 func Init(path string) (*DB, error) {
@@ -78,7 +85,12 @@ func (db *DB) migrate() error {
 			value TEXT NOT NULL DEFAULT ''
 		);
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+	// safe migrations for existing installs
+	db.Exec(`ALTER TABLE items ADD COLUMN category TEXT NOT NULL DEFAULT ''`)
+	return nil
 }
 
 func (db *DB) GetSetting(key string) (string, error) {
@@ -144,7 +156,7 @@ func (db *DB) UpdateUsername(id int64, username string) error {
 }
 
 func (db *DB) GetItems() ([]Item, error) {
-	rows, err := db.Query(`SELECT id, name, url, icon, description, type, position, created_at FROM items ORDER BY type, position, id`)
+	rows, err := db.Query(`SELECT id, name, url, icon, description, category, type, position, created_at FROM items ORDER BY type, position, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +164,7 @@ func (db *DB) GetItems() ([]Item, error) {
 	var items []Item
 	for rows.Next() {
 		var it Item
-		if err := rows.Scan(&it.ID, &it.Name, &it.URL, &it.Icon, &it.Description, &it.Type, &it.Position, &it.CreatedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.Name, &it.URL, &it.Icon, &it.Description, &it.Category, &it.Type, &it.Position, &it.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, it)
@@ -160,26 +172,40 @@ func (db *DB) GetItems() ([]Item, error) {
 	return items, rows.Err()
 }
 
-func (db *DB) CreateItem(name, url, icon, description, itemType string) (*Item, error) {
+func (db *DB) CreateItem(name, url, icon, description, category, itemType string) (*Item, error) {
 	var maxPos int
 	db.QueryRow(`SELECT COALESCE(MAX(position), -1) FROM items WHERE type = ?`, itemType).Scan(&maxPos)
 	res, err := db.Exec(
-		`INSERT INTO items (name, url, icon, description, type, position) VALUES (?, ?, ?, ?, ?, ?)`,
-		name, url, icon, description, itemType, maxPos+1,
+		`INSERT INTO items (name, url, icon, description, category, type, position) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		name, url, icon, description, category, itemType, maxPos+1,
 	)
 	if err != nil {
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
-	return &Item{ID: id, Name: name, URL: url, Icon: icon, Description: description, Type: itemType, Position: maxPos + 1}, nil
+	return &Item{ID: id, Name: name, URL: url, Icon: icon, Description: description, Category: category, Type: itemType, Position: maxPos + 1}, nil
 }
 
-func (db *DB) UpdateItem(id int64, name, url, icon, description, itemType string) error {
+func (db *DB) UpdateItem(id int64, name, url, icon, description, category, itemType string) error {
 	_, err := db.Exec(
-		`UPDATE items SET name=?, url=?, icon=?, description=?, type=? WHERE id=?`,
-		name, url, icon, description, itemType, id,
+		`UPDATE items SET name=?, url=?, icon=?, description=?, category=?, type=? WHERE id=?`,
+		name, url, icon, description, category, itemType, id,
 	)
 	return err
+}
+
+func (db *DB) ReorderItems(items []ReorderItem) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, it := range items {
+		if _, err := tx.Exec(`UPDATE items SET position=?, type=? WHERE id=?`, it.Position, it.Type, it.ID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (db *DB) DeleteItem(id int64) error {

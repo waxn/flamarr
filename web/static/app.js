@@ -32,13 +32,14 @@ function updateCounts() {
 
 let editingId = null;
 
-const overlay   = () => document.getElementById('modalOverlay');
-const modal     = () => document.getElementById('modal');
-const titleEl   = () => document.getElementById('modalTitle');
-const nameInput = () => document.getElementById('mName');
-const urlInput  = () => document.getElementById('mUrl');
-const iconInput = () => document.getElementById('mIcon');
-const descInput = () => document.getElementById('mDesc');
+const overlay      = () => document.getElementById('modalOverlay');
+const modal        = () => document.getElementById('modal');
+const titleEl      = () => document.getElementById('modalTitle');
+const nameInput    = () => document.getElementById('mName');
+const urlInput     = () => document.getElementById('mUrl');
+const iconInput    = () => document.getElementById('mIcon');
+const categoryInput= () => document.getElementById('mCategory');
+const descInput    = () => document.getElementById('mDesc');
 
 function selectedType() {
   return document.querySelector('.type-btn.active')?.dataset.type || 'service';
@@ -53,10 +54,11 @@ function openModal(item = null) {
   const type = item ? item.type : 'service';
   document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active');
 
-  nameInput().value = item?.name || '';
-  urlInput().value  = item?.url  || '';
-  iconInput().value = item?.icon || '';
-  descInput().value = item?.desc || '';
+  nameInput().value     = item?.name     || '';
+  urlInput().value      = item?.url      || '';
+  iconInput().value     = item?.icon     || '';
+  categoryInput().value = item?.category || '';
+  descInput().value     = item?.desc     || '';
 
   overlay().classList.add('open');
   setTimeout(() => nameInput().focus(), 50);
@@ -82,6 +84,7 @@ async function saveItem() {
     name,
     url,
     icon:        iconInput().value.trim(),
+    category:    categoryInput().value.trim(),
     description: descInput().value.trim(),
     type:        selectedType(),
   };
@@ -264,6 +267,105 @@ function initWeather() {
   });
 }
 
+// ── Drag and drop ────────────────────────────────────
+
+let _dragCard = null;
+
+function clearDropClasses() {
+  document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+    el.classList.remove('drop-before', 'drop-after');
+  });
+}
+
+function nearestCard(grid, x, y) {
+  let best = null, bestDist = Infinity;
+  for (const card of grid.querySelectorAll('[data-id]:not(.dragging)')) {
+    const r = card.getBoundingClientRect();
+    const dist = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+    if (dist < bestDist) { bestDist = dist; best = card; }
+  }
+  return best;
+}
+
+async function saveOrder() {
+  const items = [];
+  document.querySelectorAll('#grid-services [data-id]').forEach((el, i) => {
+    items.push({ id: parseInt(el.dataset.id), position: i, type: 'service' });
+  });
+  document.querySelectorAll('#grid-bookmarks [data-id]').forEach((el, i) => {
+    items.push({ id: parseInt(el.dataset.id), position: i, type: 'bookmark' });
+  });
+  await fetch('/api/items/reorder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(items),
+  });
+}
+
+function initDrag() {
+  document.addEventListener('dragstart', e => {
+    const card = e.target.closest('[data-id]');
+    if (!card) return;
+    // don't drag when clicking buttons
+    if (e.target.closest('button')) { e.preventDefault(); return; }
+    _dragCard = card;
+    e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  });
+
+  document.addEventListener('dragend', () => {
+    _dragCard?.classList.remove('dragging');
+    clearDropClasses();
+    _dragCard = null;
+  });
+
+  for (const gridId of ['grid-services', 'grid-bookmarks']) {
+    const grid = document.getElementById(gridId);
+    if (!grid) continue;
+    const newType = gridId === 'grid-services' ? 'service' : 'bookmark';
+
+    grid.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!_dragCard) return;
+      clearDropClasses();
+      const near = nearestCard(grid, e.clientX, e.clientY);
+      if (!near || near === _dragCard) return;
+      const r = near.getBoundingClientRect();
+      const before = grid.id === 'grid-services'
+        ? e.clientX < r.left + r.width / 2
+        : e.clientY < r.top + r.height / 2;
+      near.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+
+    grid.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!_dragCard) return;
+      clearDropClasses();
+
+      const near = nearestCard(grid, e.clientX, e.clientY);
+      if (!near || near === _dragCard) {
+        grid.insertBefore(_dragCard, grid.querySelector('.empty-placeholder'));
+      } else {
+        const r = near.getBoundingClientRect();
+        const before = grid.id === 'grid-services'
+          ? e.clientX < r.left + r.width / 2
+          : e.clientY < r.top + r.height / 2;
+        grid.insertBefore(_dragCard, before ? near : near.nextSibling);
+      }
+
+      if (_dragCard.dataset.type !== newType) {
+        _dragCard.dataset.type = newType;
+        _dragCard.classList.toggle('service-card',  newType === 'service');
+        _dragCard.classList.toggle('bookmark-card', newType === 'bookmark');
+      }
+
+      refreshEmpty();
+      updateCounts();
+      saveOrder();
+    });
+  }
+}
+
 // ── Event wiring ─────────────────────────────────────
 
 function init() {
@@ -271,6 +373,7 @@ function init() {
   initSearch();
   initClock();
   initWeather();
+  initDrag();
 
   // Open button
   document.getElementById('openModal')?.addEventListener('click', () => openModal());
@@ -300,12 +403,13 @@ function init() {
       e.preventDefault();
       const card = editBtn.closest('[data-id]');
       openModal({
-        id:   card.dataset.id,
-        name: card.dataset.name,
-        url:  card.dataset.url,
-        icon: card.dataset.icon,
-        desc: card.dataset.desc,
-        type: card.dataset.type,
+        id:       card.dataset.id,
+        name:     card.dataset.name,
+        url:      card.dataset.url,
+        icon:     card.dataset.icon,
+        category: card.dataset.category,
+        desc:     card.dataset.desc,
+        type:     card.dataset.type,
       });
       return;
     }

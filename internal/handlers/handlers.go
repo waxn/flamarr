@@ -610,12 +610,32 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, items)
 }
 
+func (h *Handler) ReorderItems(w http.ResponseWriter, r *http.Request) {
+	var items []db.ReorderItem
+	if err := json.NewDecoder(r.Body).Decode(&items); err != nil {
+		jsonErr(w, "bad request", 400)
+		return
+	}
+	for i := range items {
+		if items[i].Type != "service" && items[i].Type != "bookmark" {
+			jsonErr(w, "invalid type", 400)
+			return
+		}
+	}
+	if err := h.db.ReorderItems(items); err != nil {
+		jsonErr(w, "db error", 500)
+		return
+	}
+	jsonOK(w, map[string]bool{"ok": true})
+}
+
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name        string `json:"name"`
 		URL         string `json:"url"`
 		Icon        string `json:"icon"`
 		Description string `json:"description"`
+		Category    string `json:"category"`
 		Type        string `json:"type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -636,7 +656,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		body.Type = "service"
 	}
 	body.Icon = resolveItemIcon(body.Name, body.URL, body.Icon)
-	item, err := h.db.CreateItem(body.Name, body.URL, body.Icon, body.Description, body.Type)
+	item, err := h.db.CreateItem(body.Name, body.URL, body.Icon, body.Description, body.Category, body.Type)
 	if err != nil {
 		jsonErr(w, "db error", 500)
 		return
@@ -657,6 +677,7 @@ func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		URL         string `json:"url"`
 		Icon        string `json:"icon"`
 		Description string `json:"description"`
+		Category    string `json:"category"`
 		Type        string `json:"type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -673,7 +694,7 @@ func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		body.Type = "service"
 	}
 	body.Icon = resolveItemIcon(body.Name, body.URL, body.Icon)
-	if err := h.db.UpdateItem(id, body.Name, body.URL, body.Icon, body.Description, body.Type); err != nil {
+	if err := h.db.UpdateItem(id, body.Name, body.URL, body.Icon, body.Description, body.Category, body.Type); err != nil {
 		jsonErr(w, "db error", 500)
 		return
 	}

@@ -41,14 +41,11 @@
       </div>
       <div class="services-grid services-grid-plain" id="grid-services">
         {{range .Services}}
-        <a class="service-card" href="{{.URL}}" target="_blank" rel="noopener" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-type="service">
-          <div class="card-actions">
-            <button class="card-btn edit-btn" title="Edit">
-              <span>Edit</span>
-            </button>
-            <button class="card-btn delete-btn" title="Delete">
-              <span>Delete</span>
-            </button>
+        <a class="service-card" href="{{.URL}}" target="_blank" rel="noopener" draggable="true" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-type="service">
+          <div class="drag-handle" draggable="false">⠿</div>
+          <div class="card-actions" draggable="false">
+            <button class="card-btn edit-btn" title="Edit" draggable="false"><span>Edit</span></button>
+            <button class="card-btn delete-btn" title="Delete" draggable="false"><span>Delete</span></button>
           </div>
           <span class="service-name">{{.Name}}</span>
           {{if .Description}}<span class="service-desc">{{.Description}}</span>{{end}}
@@ -67,19 +64,16 @@
       </div>
       <div class="bookmarks-grid bookmarks-grid-columns" id="grid-bookmarks">
         {{range .Bookmarks}}
-        <a class="bookmark-card" href="{{.URL}}" target="_blank" rel="noopener" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-type="bookmark">
+        <a class="bookmark-card" href="{{.URL}}" target="_blank" rel="noopener" draggable="true" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-type="bookmark">
+          <div class="drag-handle" draggable="false">⠿</div>
           <div class="bookmark-body">
             <span class="bookmark-name">{{.Name}}</span>
             {{if .Description}}<span class="bookmark-desc">{{.Description}}</span>{{end}}
             <span class="bookmark-url">{{.URL}}</span>
           </div>
-          <div class="card-actions bookmark-actions">
-            <button class="card-btn edit-btn" title="Edit">
-              <span>Edit</span>
-            </button>
-            <button class="card-btn delete-btn" title="Delete">
-              <span>Delete</span>
-            </button>
+          <div class="card-actions bookmark-actions" draggable="false">
+            <button class="card-btn edit-btn" title="Edit" draggable="false"><span>Edit</span></button>
+            <button class="card-btn delete-btn" title="Delete" draggable="false"><span>Delete</span></button>
           </div>
         </a>
         {{end}}
@@ -116,6 +110,10 @@
       <div class="field">
         <label for="mIcon">Icon <span class="field-hint">emoji or image URL (optional)</span></label>
         <input id="mIcon" type="text" placeholder="🎬 or https://…/icon.png" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="mCategory">Category <span class="field-hint">optional</span></label>
+        <input id="mCategory" type="text" placeholder="Media, Dev, Network…" autocomplete="off" />
       </div>
       <div class="field" id="descField">
         <label for="mDesc">Description <span class="field-hint">optional</span></label>
