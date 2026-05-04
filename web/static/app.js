@@ -158,7 +158,7 @@ function wmoEmoji(code) { return WMO[code] || '🌡'; }
 
 async function fetchWeather(lat, lon) {
   try {
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius&forecast_days=1`);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit&forecast_days=1`);
     if (!res.ok) return null;
     return (await res.json()).current;
   } catch { return null; }
@@ -179,7 +179,7 @@ function setWeatherDisplay(city, temp, code) {
     el.textContent = 'Select city';
     el.className = 'weather-empty';
   } else {
-    el.textContent = `${wmoEmoji(code)} ${Math.round(temp)}°C  ${city}`;
+    el.textContent = `${wmoEmoji(code)} ${Math.round(temp)}°F  ${city}`;
     el.className = '';
   }
 }
