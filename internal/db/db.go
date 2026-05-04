@@ -73,7 +73,25 @@ func (db *DB) migrate() error {
 			position INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL DEFAULT ''
+		);
 	`)
+	return err
+}
+
+func (db *DB) GetSetting(key string) (string, error) {
+	var val string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`, key).Scan(&val)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return val, err
+}
+
+func (db *DB) SetSetting(key, value string) error {
+	_, err := db.Exec(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
 	return err
 }
 

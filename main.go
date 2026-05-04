@@ -53,6 +53,8 @@ func main() {
 	mux.HandleFunc("POST /forgot-username", h.HandleForgotUsername)
 
 	mux.Handle("GET /{$}", h.AuthMiddleware(http.HandlerFunc(h.Dashboard)))
+	mux.Handle("GET /api/settings", h.AuthMiddleware(http.HandlerFunc(h.GetSettings)))
+	mux.Handle("PUT /api/settings", h.AuthMiddleware(http.HandlerFunc(h.PutSettings)))
 	mux.Handle("GET /api/items", h.AuthMiddleware(http.HandlerFunc(h.GetItems)))
 	mux.Handle("POST /api/items", h.AuthMiddleware(http.HandlerFunc(h.CreateItem)))
 	mux.Handle("PUT /api/items/{id}", h.AuthMiddleware(http.HandlerFunc(h.UpdateItem)))

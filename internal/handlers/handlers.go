@@ -554,6 +554,37 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "dashboard", data)
 }
 
+// Settings
+
+func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	keys := []string{"weather_lat", "weather_lon", "weather_city"}
+	out := make(map[string]string, len(keys))
+	for _, k := range keys {
+		v, _ := h.db.GetSetting(k)
+		out[k] = v
+	}
+	jsonOK(w, out)
+}
+
+func (h *Handler) PutSettings(w http.ResponseWriter, r *http.Request) {
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonErr(w, "bad request", 400)
+		return
+	}
+	allowed := map[string]bool{"weather_lat": true, "weather_lon": true, "weather_city": true}
+	for k, v := range body {
+		if !allowed[k] {
+			continue
+		}
+		if err := h.db.SetSetting(k, v); err != nil {
+			jsonErr(w, "db error", 500)
+			return
+		}
+	}
+	jsonOK(w, map[string]bool{"ok": true})
+}
+
 // API
 
 func jsonOK(w http.ResponseWriter, v any) {

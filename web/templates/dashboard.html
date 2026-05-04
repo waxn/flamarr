@@ -15,9 +15,19 @@
 
   <main class="main">
     <section class="hero">
-      <div class="hero-meta">{{.Today}}</div>
+      <div class="hero-meta-row">
+        <div class="hero-meta">{{.Today}} <span class="hero-clock" id="heroClock"></span></div>
+        <div class="weather-widget" id="weatherWidget">
+          <span class="weather-display" id="weatherDisplay"></span>
+          <button class="weather-pen" id="weatherPen" title="Set weather location">&#9998;</button>
+          <div class="weather-editor" id="weatherEditor" hidden>
+            <input type="text" id="weatherInput" placeholder="City…" autocomplete="off" />
+            <button class="weather-save" id="weatherSave">→</button>
+          </div>
+        </div>
+      </div>
       <div class="hero-row">
-        <h1 class="hero-title">Good afternoon!</h1>
+        <h1 class="hero-title" id="greeting">Good morning!</h1>
       </div>
     </section>
 
@@ -39,6 +49,7 @@
             </button>
           </div>
           <span class="service-name">{{.Name}}</span>
+          {{if .Description}}<span class="service-desc">{{.Description}}</span>{{end}}
           <span class="service-url">{{.URL}}</span>
         </a>
         {{end}}

@@ -117,11 +117,120 @@ function refreshEmpty() {
   if (eb) eb.style.display = document.querySelectorAll('.bookmark-card').length ? 'none' : '';
 }
 
+// ── Greeting + clock ─────────────────────────────────
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h >= 5  && h < 12) return 'Good morning!';
+  if (h >= 12 && h < 17) return 'Good afternoon!';
+  if (h >= 17 && h < 22) return 'Good evening!';
+  return 'Good night!';
+}
+
+function clockTick() {
+  const el = document.getElementById('heroClock');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = '· ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function initClock() {
+  const g = document.getElementById('greeting');
+  if (g) g.textContent = greeting();
+  clockTick();
+  setInterval(clockTick, 10000);
+}
+
+// ── Weather ───────────────────────────────────────────
+
+const WMO = {
+  0:'☀️',1:'🌤',2:'⛅',3:'☁️',
+  45:'🌫',48:'🌫',
+  51:'🌦',53:'🌦',55:'🌦',56:'🌦',57:'🌦',
+  61:'🌧',63:'🌧',65:'🌧',66:'🌧',67:'🌧',
+  71:'🌨',73:'🌨',75:'🌨',77:'🌨',
+  80:'🌧',81:'🌧',82:'🌧',
+  85:'❄️',86:'❄️',
+  95:'⛈',96:'⛈',99:'⛈',
+};
+
+function wmoEmoji(code) {
+  return WMO[code] || '🌡';
+}
+
+async function fetchWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius&forecast_days=1`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.current;
+}
+
+async function geocodeCity(city) {
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.results?.[0] ?? null;
+}
+
+function renderWeather(city, temp, code) {
+  const el = document.getElementById('weatherDisplay');
+  if (!el) return;
+  el.textContent = `${wmoEmoji(code)} ${Math.round(temp)}°C ${city}`;
+}
+
+async function loadWeather() {
+  const res = await fetch('/api/settings');
+  if (!res.ok) return;
+  const s = await res.json();
+  if (!s.weather_lat || !s.weather_lon || !s.weather_city) return;
+  const current = await fetchWeather(s.weather_lat, s.weather_lon);
+  if (current) renderWeather(s.weather_city, current.temperature_2m, current.weather_code);
+}
+
+function initWeather() {
+  loadWeather();
+
+  const pen    = document.getElementById('weatherPen');
+  const editor = document.getElementById('weatherEditor');
+  const input  = document.getElementById('weatherInput');
+  const save   = document.getElementById('weatherSave');
+  if (!pen || !editor || !input || !save) return;
+
+  pen.addEventListener('click', () => {
+    editor.hidden = !editor.hidden;
+    if (!editor.hidden) setTimeout(() => input.focus(), 30);
+  });
+
+  const doSave = async () => {
+    const city = input.value.trim();
+    if (!city) return;
+    save.textContent = '…';
+    const result = await geocodeCity(city);
+    if (!result) { save.textContent = '✗'; setTimeout(() => { save.textContent = '→'; }, 1500); return; }
+    await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weather_lat: String(result.latitude), weather_lon: String(result.longitude), weather_city: result.name }),
+    });
+    save.textContent = '→';
+    editor.hidden = true;
+    input.value = '';
+    const current = await fetchWeather(result.latitude, result.longitude);
+    if (current) renderWeather(result.name, current.temperature_2m, current.weather_code);
+  };
+
+  save.addEventListener('click', doSave);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') { editor.hidden = true; } });
+}
+
 // ── Event wiring ─────────────────────────────────────
 
 function init() {
   initIcons();
   initSearch();
+  initClock();
+  initWeather();
 
   // Open button
   document.getElementById('openModal')?.addEventListener('click', () => openModal());
