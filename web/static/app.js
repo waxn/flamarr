@@ -144,84 +144,124 @@ function initClock() {
 // ── Weather ───────────────────────────────────────────
 
 const WMO = {
-  0:'☀️',1:'🌤',2:'⛅',3:'☁️',
-  45:'🌫',48:'🌫',
-  51:'🌦',53:'🌦',55:'🌦',56:'🌦',57:'🌦',
-  61:'🌧',63:'🌧',65:'🌧',66:'🌧',67:'🌧',
-  71:'🌨',73:'🌨',75:'🌨',77:'🌨',
-  80:'🌧',81:'🌧',82:'🌧',
-  85:'❄️',86:'❄️',
-  95:'⛈',96:'⛈',99:'⛈',
+  0:'☀️', 1:'🌤', 2:'⛅', 3:'☁️',
+  45:'🌫', 48:'🌫',
+  51:'🌦', 53:'🌦', 55:'🌦', 56:'🌦', 57:'🌦',
+  61:'🌧', 63:'🌧', 65:'🌧', 66:'🌧', 67:'🌧',
+  71:'🌨', 73:'🌨', 75:'🌨', 77:'🌨',
+  80:'🌧', 81:'🌧', 82:'🌧',
+  85:'❄️', 86:'❄️',
+  95:'⛈', 96:'⛈', 99:'⛈',
 };
 
-function wmoEmoji(code) {
-  return WMO[code] || '🌡';
-}
+function wmoEmoji(code) { return WMO[code] || '🌡'; }
 
 async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius&forecast_days=1`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.current;
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius&forecast_days=1`);
+    if (!res.ok) return null;
+    return (await res.json()).current;
+  } catch { return null; }
 }
 
-async function geocodeCity(city) {
-  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.results?.[0] ?? null;
+async function searchCities(query) {
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6`);
+    if (!res.ok) return [];
+    return (await res.json()).results ?? [];
+  } catch { return []; }
 }
 
-function renderWeather(city, temp, code) {
+function setWeatherDisplay(city, temp, code) {
   const el = document.getElementById('weatherDisplay');
   if (!el) return;
-  el.textContent = `${wmoEmoji(code)} ${Math.round(temp)}°C ${city}`;
+  if (!city) {
+    el.textContent = 'Select city';
+    el.className = 'weather-empty';
+  } else {
+    el.textContent = `${wmoEmoji(code)} ${Math.round(temp)}°C  ${city}`;
+    el.className = '';
+  }
 }
 
 async function loadWeather() {
-  const res = await fetch('/api/settings');
-  if (!res.ok) return;
-  const s = await res.json();
-  if (!s.weather_lat || !s.weather_lon || !s.weather_city) return;
-  const current = await fetchWeather(s.weather_lat, s.weather_lon);
-  if (current) renderWeather(s.weather_city, current.temperature_2m, current.weather_code);
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const s = await res.json();
+    if (!s.weather_lat || !s.weather_city) { setWeatherDisplay('', 0, 0); return; }
+    const current = await fetchWeather(s.weather_lat, s.weather_lon);
+    if (current) setWeatherDisplay(s.weather_city, current.temperature_2m, current.weather_code);
+  } catch {}
 }
+
+let _weatherDebounce = null;
 
 function initWeather() {
   loadWeather();
 
-  const pen    = document.getElementById('weatherPen');
-  const editor = document.getElementById('weatherEditor');
-  const input  = document.getElementById('weatherInput');
-  const save   = document.getElementById('weatherSave');
-  if (!pen || !editor || !input || !save) return;
+  const trigger  = document.getElementById('weatherTrigger');
+  const popup    = document.getElementById('weatherPopup');
+  const input    = document.getElementById('weatherInput');
+  const resultEl = document.getElementById('weatherResults');
+  if (!trigger || !popup || !input || !resultEl) return;
 
-  pen.addEventListener('click', () => {
-    editor.hidden = !editor.hidden;
-    if (!editor.hidden) setTimeout(() => input.focus(), 30);
-  });
-
-  const doSave = async () => {
-    const city = input.value.trim();
-    if (!city) return;
-    save.textContent = '…';
-    const result = await geocodeCity(city);
-    if (!result) { save.textContent = '✗'; setTimeout(() => { save.textContent = '→'; }, 1500); return; }
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weather_lat: String(result.latitude), weather_lon: String(result.longitude), weather_city: result.name }),
-    });
-    save.textContent = '→';
-    editor.hidden = true;
+  const openPopup = () => {
+    popup.hidden = false;
+    setTimeout(() => input.focus(), 20);
+  };
+  const closePopup = () => {
+    popup.hidden = true;
     input.value = '';
-    const current = await fetchWeather(result.latitude, result.longitude);
-    if (current) renderWeather(result.name, current.temperature_2m, current.weather_code);
+    resultEl.hidden = true;
+    resultEl.innerHTML = '';
   };
 
-  save.addEventListener('click', doSave);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') { editor.hidden = true; } });
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    popup.hidden ? openPopup() : closePopup();
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('weatherWidget')?.contains(e.target)) closePopup();
+  });
+
+  input.addEventListener('keydown', e => { if (e.key === 'Escape') closePopup(); });
+
+  input.addEventListener('input', () => {
+    clearTimeout(_weatherDebounce);
+    const q = input.value.trim();
+    if (!q) { resultEl.hidden = true; resultEl.innerHTML = ''; return; }
+
+    _weatherDebounce = setTimeout(async () => {
+      const cities = await searchCities(q);
+      resultEl.innerHTML = '';
+      if (!cities.length) { resultEl.hidden = true; return; }
+
+      cities.forEach(c => {
+        const li = document.createElement('li');
+        li.className = 'weather-result-item';
+        const name = document.createTextNode(c.name);
+        const country = document.createElement('span');
+        country.className = 'weather-result-country';
+        country.textContent = [c.admin1, c.country].filter(Boolean).join(', ');
+        li.appendChild(name);
+        li.appendChild(country);
+        li.addEventListener('click', async () => {
+          closePopup();
+          await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weather_lat: String(c.latitude), weather_lon: String(c.longitude), weather_city: c.name }),
+          });
+          const current = await fetchWeather(c.latitude, c.longitude);
+          if (current) setWeatherDisplay(c.name, current.temperature_2m, current.weather_code);
+        });
+        resultEl.appendChild(li);
+      });
+      resultEl.hidden = false;
+    }, 280);
+  });
 }
 
 // ── Event wiring ─────────────────────────────────────

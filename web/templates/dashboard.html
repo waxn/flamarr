@@ -18,11 +18,13 @@
       <div class="hero-meta-row">
         <div class="hero-meta">{{.Today}} <span class="hero-clock" id="heroClock"></span></div>
         <div class="weather-widget" id="weatherWidget">
-          <span class="weather-display" id="weatherDisplay"></span>
-          <button class="weather-pen" id="weatherPen" title="Set weather location">&#9998;</button>
-          <div class="weather-editor" id="weatherEditor" hidden>
-            <input type="text" id="weatherInput" placeholder="City…" autocomplete="off" />
-            <button class="weather-save" id="weatherSave">→</button>
+          <button class="weather-trigger" id="weatherTrigger">
+            <span id="weatherDisplay" class="weather-empty">Select city</span>
+            <span class="weather-pen">&#9998;</span>
+          </button>
+          <div class="weather-popup" id="weatherPopup" hidden>
+            <input type="text" id="weatherInput" placeholder="Search city…" autocomplete="off" spellcheck="false" />
+            <ul class="weather-results" id="weatherResults" hidden></ul>
           </div>
         </div>
       </div>
