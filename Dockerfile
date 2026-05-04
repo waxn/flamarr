@@ -11,16 +11,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o flamarr .
 # ──────────────────────────────────────────────────────
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata && \
-    addgroup -S flamarr && adduser -S -G flamarr flamarr
+RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 COPY --from=builder /build/flamarr .
 
-RUN mkdir -p /data && chown flamarr:flamarr /data
+RUN mkdir -p /data
 VOLUME ["/data"]
-
-USER flamarr
 
 ENV PORT=5005 \
     DATA_DIR=/data
