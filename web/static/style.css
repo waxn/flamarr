@@ -413,204 +413,145 @@ html, body {
   letter-spacing: 0.04em;
 }
 
-/* ── Service cards ────────────────────────────────── */
+/* ── Category groups ──────────────────────────────── */
 
-.services-grid {
+.category-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px 32px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 40px 60px;
+  margin-top: 16px;
 }
 
-.services-grid-plain {
-  margin-top: 12px;
-}
-
-.service-card {
-  position: relative;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
+.category-group {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 12px;
+}
+
+.category-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.category-items {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
 }
 
-.service-card:hover {
-  transform: translateX(2px);
-  opacity: 0.9;
+/* ── Item rows ────────────────────────────────────── */
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text);
+  padding: 10px 8px;
+  cursor: grab;
+  position: relative;
+  border-radius: var(--radius-md);
+  transition: background 0.12s, transform 0.12s;
+  user-select: none;
 }
 
-.service-card:hover .card-actions { opacity: 1; }
+.item-row:hover { background: var(--surface-2); transform: translateX(2px); }
+.item-row:active { cursor: grabbing; }
+.item-row.dragging { opacity: 0; }
+.item-row:hover .item-actions { opacity: 1; }
 
-.service-card { cursor: grab; }
-.service-card:active { cursor: grabbing; }
-.bookmark-card { cursor: grab; }
-.bookmark-card:active { cursor: grabbing; }
+.item-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
 
-.service-card.dragging,
-.bookmark-card.dragging { opacity: 0.3; }
+.item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.item-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-desc {
+  font-size: 12px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-url {
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+/* ── Drag ─────────────────────────────────────────── */
 
 .drag-placeholder {
-  border-radius: var(--radius-md);
   background: var(--accent-dim);
-  border: 1.5px dashed var(--accent);
-  opacity: 0.6;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  opacity: 0.5;
   pointer-events: none;
-  min-height: 40px;
 }
 
+/* ── Card actions ─────────────────────────────────── */
+
 .card-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: flex;
   gap: 4px;
   opacity: 0;
   transition: opacity 0.15s;
+}
+
+.item-actions {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .card-btn {
   background: transparent;
   border: none;
-  border-radius: 999px;
   color: var(--text-soft);
-  width: auto;
-  height: 22px;
-  padding: 0 8px;
+  height: 20px;
+  padding: 0 6px;
   display: flex;
   align-items: center;
-  justify-content: center;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-size: 11px;
+  transition: color 0.15s;
   flex-shrink: 0;
 }
 
-.card-btn.edit-btn:hover {
-  background: transparent;
-  color: var(--text);
-}
-
-.card-btn.delete-btn:hover {
-  background: transparent;
-  color: var(--red);
-}
-
-.service-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  text-align: left;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-}
-
-.service-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: left;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.service-url {
-  font-size: 11px;
-  color: var(--accent);
-  text-align: left;
-  width: 100%;
-  white-space: normal;
-  overflow: visible;
-  word-break: break-word;
-  background: transparent;
-  border: none;
-  padding: 0;
-}
-
-/* ── Bookmark cards ───────────────────────────────── */
-
-.bookmarks-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px 64px;
-}
-
-.bookmarks-grid-columns {
-  margin-top: 4px;
-}
-
-.bookmark-card {
-  position: relative;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
-}
-
-.bookmark-card:hover {
-  transform: translateX(2px);
-  opacity: 0.9;
-}
-
-.bookmark-card:hover .bookmark-actions { opacity: 1; }
-
-.bookmark-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.bookmark-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bookmark-desc {
-  font-size: 13px;
-  color: var(--text-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bookmark-url {
-  font-size: 12px;
-  color: var(--accent);
-  white-space: normal;
-  overflow: visible;
-  word-break: break-word;
-  background: transparent;
-  border: none;
-  padding: 0;
-}
-
-.bookmark-actions {
-  position: static;
-  opacity: 0;
-  flex-shrink: 0;
-  transition: opacity 0.15s;
-}
+.card-btn.edit-btn:hover  { color: var(--text); }
+.card-btn.delete-btn:hover { color: var(--red); }
 
 /* ── Empty states ─────────────────────────────────── */
 

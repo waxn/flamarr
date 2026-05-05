@@ -37,21 +37,37 @@
       <div class="section-header section-header-hero">
         <span class="section-title">Applications</span>
         <span class="section-shortcut">S</span>
-        <span class="section-count" id="count-services">{{len .Services}}</span>
+        <span class="section-count" id="count-services">{{.ServiceCount}}</span>
       </div>
-      <div class="services-grid services-grid-plain" id="grid-services">
-        {{range .Services}}
-        <a class="service-card" href="{{.URL}}" target="_blank" rel="noopener" draggable="true" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-type="service">
-          <div class="card-actions" draggable="false">
-            <button class="card-btn edit-btn" title="Edit" draggable="false"><span>Edit</span></button>
-            <button class="card-btn delete-btn" title="Delete" draggable="false"><span>Delete</span></button>
+      <div class="category-grid" id="grid-services">
+        {{if .ServiceGroups}}
+          {{range .ServiceGroups}}
+          <div class="category-group" data-category="{{.Category}}">
+            {{if .Category}}<div class="category-label">{{.Category}}</div>{{end}}
+            <div class="category-items">
+              {{range .Items}}
+              <div class="item-row" draggable="true"
+                 data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}"
+                 data-icon="{{.Icon}}" data-desc="{{.Description}}"
+                 data-category="{{.Category}}" data-type="service">
+                <div class="item-avatar" data-name="{{.Name}}" data-icon="{{.Icon}}"></div>
+                <div class="item-body">
+                  <span class="item-name">{{.Name}}</span>
+                  {{if .Description}}<span class="item-desc">{{.Description}}</span>{{end}}
+                  <span class="item-url">{{.URL}}</span>
+                </div>
+                <div class="card-actions item-actions" draggable="false">
+                  <button class="card-btn edit-btn" draggable="false"><span>Edit</span></button>
+                  <button class="card-btn delete-btn" draggable="false"><span>Delete</span></button>
+                </div>
+              </div>
+              {{end}}
+            </div>
           </div>
-          <span class="service-name">{{.Name}}</span>
-          {{if .Description}}<span class="service-desc">{{.Description}}</span>{{end}}
-          <span class="service-url">{{.URL}}</span>
-        </a>
+          {{end}}
+        {{else}}
+          <div class="empty-placeholder" id="empty-services">No services yet — press <kbd>S</kbd> to add one</div>
         {{end}}
-        <div class="empty-placeholder" id="empty-services" {{if .Services}}style="display:none"{{end}}>No services yet</div>
       </div>
     </section>
 
@@ -59,23 +75,37 @@
       <div class="section-header">
         <span class="section-title">Bookmarks</span>
         <span class="section-shortcut">B</span>
-        <span class="section-count" id="count-bookmarks">{{len .Bookmarks}}</span>
+        <span class="section-count" id="count-bookmarks">{{.BookmarkCount}}</span>
       </div>
-      <div class="bookmarks-grid bookmarks-grid-columns" id="grid-bookmarks">
-        {{range .Bookmarks}}
-        <a class="bookmark-card" href="{{.URL}}" target="_blank" rel="noopener" draggable="true" data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}" data-icon="{{.Icon}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-type="bookmark">
-          <div class="bookmark-body">
-            <span class="bookmark-name">{{.Name}}</span>
-            {{if .Description}}<span class="bookmark-desc">{{.Description}}</span>{{end}}
-            <span class="bookmark-url">{{.URL}}</span>
+      <div class="category-grid" id="grid-bookmarks">
+        {{if .BookmarkGroups}}
+          {{range .BookmarkGroups}}
+          <div class="category-group" data-category="{{.Category}}">
+            {{if .Category}}<div class="category-label">{{.Category}}</div>{{end}}
+            <div class="category-items">
+              {{range .Items}}
+              <div class="item-row" draggable="true"
+                 data-id="{{.ID}}" data-name="{{.Name}}" data-url="{{.URL}}"
+                 data-icon="{{.Icon}}" data-desc="{{.Description}}"
+                 data-category="{{.Category}}" data-type="bookmark">
+                <div class="item-avatar" data-name="{{.Name}}" data-icon="{{.Icon}}"></div>
+                <div class="item-body">
+                  <span class="item-name">{{.Name}}</span>
+                  {{if .Description}}<span class="item-desc">{{.Description}}</span>{{end}}
+                  <span class="item-url">{{.URL}}</span>
+                </div>
+                <div class="card-actions item-actions" draggable="false">
+                  <button class="card-btn edit-btn" draggable="false"><span>Edit</span></button>
+                  <button class="card-btn delete-btn" draggable="false"><span>Delete</span></button>
+                </div>
+              </div>
+              {{end}}
+            </div>
           </div>
-          <div class="card-actions bookmark-actions" draggable="false">
-            <button class="card-btn edit-btn" title="Edit" draggable="false"><span>Edit</span></button>
-            <button class="card-btn delete-btn" title="Delete" draggable="false"><span>Delete</span></button>
-          </div>
-        </a>
+          {{end}}
+        {{else}}
+          <div class="empty-placeholder" id="empty-bookmarks">No bookmarks yet — press <kbd>B</kbd> to add one</div>
         {{end}}
-        <div class="empty-placeholder" id="empty-bookmarks" {{if .Bookmarks}}style="display:none"{{end}}>No bookmarks yet</div>
       </div>
     </section>
   </main>
@@ -108,6 +138,10 @@
       <div class="field">
         <label for="mIcon">Icon <span class="field-hint">emoji or image URL (optional)</span></label>
         <input id="mIcon" type="text" placeholder="🎬 or https://…/icon.png" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="mCategory">Category <span class="field-hint">optional</span></label>
+        <input id="mCategory" type="text" placeholder="Media, Dev, Network…" autocomplete="off" />
       </div>
       <div class="field" id="descField">
         <label for="mDesc">Description <span class="field-hint">optional</span></label>

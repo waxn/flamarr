@@ -35,6 +35,7 @@ type ReorderItem struct {
 	ID       int64  `json:"id"`
 	Position int    `json:"position"`
 	Type     string `json:"type"`
+	Category string `json:"category"`
 }
 
 func Init(path string) (*DB, error) {
@@ -201,7 +202,7 @@ func (db *DB) ReorderItems(items []ReorderItem) error {
 	}
 	defer tx.Rollback()
 	for _, it := range items {
-		if _, err := tx.Exec(`UPDATE items SET position=?, type=? WHERE id=?`, it.Position, it.Type, it.ID); err != nil {
+		if _, err := tx.Exec(`UPDATE items SET position=?, type=?, category=? WHERE id=?`, it.Position, it.Type, it.Category, it.ID); err != nil {
 			return err
 		}
 	}

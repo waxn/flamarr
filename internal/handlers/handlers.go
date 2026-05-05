@@ -527,10 +527,32 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 // Dashboard
 
+type ItemGroup struct {
+	Category string
+	Items    []db.Item
+}
+
+func groupByCategory(items []db.Item) []ItemGroup {
+	var groups []ItemGroup
+	idx := make(map[string]int)
+	for _, item := range items {
+		cat := item.Category
+		if i, ok := idx[cat]; ok {
+			groups[i].Items = append(groups[i].Items, item)
+		} else {
+			idx[cat] = len(groups)
+			groups = append(groups, ItemGroup{Category: cat, Items: []db.Item{item}})
+		}
+	}
+	return groups
+}
+
 type dashboardData struct {
-	Services  []db.Item
-	Bookmarks []db.Item
-	Today     string
+	ServiceGroups  []ItemGroup
+	BookmarkGroups []ItemGroup
+	ServiceCount   int
+	BookmarkCount  int
+	Today          string
 }
 
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
@@ -539,19 +561,24 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "db error", 500)
 		return
 	}
-	data := dashboardData{}
-	data.Today = time.Now().Format("Monday, 2 January 2006")
+	var services, bookmarks []db.Item
 	for _, it := range items {
 		if it.Icon == "" {
 			it.Icon = resolveItemIcon(it.Name, it.URL, "")
 		}
 		if it.Type == "service" {
-			data.Services = append(data.Services, it)
+			services = append(services, it)
 		} else {
-			data.Bookmarks = append(data.Bookmarks, it)
+			bookmarks = append(bookmarks, it)
 		}
 	}
-	h.render(w, "dashboard", data)
+	h.render(w, "dashboard", dashboardData{
+		Today:          time.Now().Format("Monday, 2 January 2006"),
+		ServiceGroups:  groupByCategory(services),
+		BookmarkGroups: groupByCategory(bookmarks),
+		ServiceCount:   len(services),
+		BookmarkCount:  len(bookmarks),
+	})
 }
 
 // Settings

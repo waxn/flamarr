@@ -1,7 +1,27 @@
 'use strict';
 
+const AVATAR_COLORS = ['#10b981','#06b6d4','#6366f1','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+
+function avatarColor(name) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
 function initIcons() {
-  // Intentionally empty: the UI is text-only now.
+  document.querySelectorAll('.item-avatar[data-name]').forEach(el => {
+    const name = el.dataset.name || '?';
+    const icon = el.dataset.icon || '';
+    const color = avatarColor(name);
+    if (icon && icon.length <= 4 && !/https?:/.test(icon)) {
+      el.style.background = color + '18';
+      el.textContent = icon;
+    } else {
+      el.style.background = color + '22';
+      el.style.color = color;
+      el.textContent = name.charAt(0).toUpperCase();
+    }
+  });
 }
 
 // ── Search ───────────────────────────────────────────
@@ -11,34 +31,33 @@ function initSearch() {
   if (!input) return;
   input.addEventListener('input', () => {
     const q = input.value.toLowerCase().trim();
-    document.querySelectorAll('.service-card, .bookmark-card').forEach(card => {
-      const text = (card.dataset.name + ' ' + card.dataset.url + ' ' + (card.dataset.desc || '')).toLowerCase();
-      card.style.display = (!q || text.includes(q)) ? '' : 'none';
+    document.querySelectorAll('.item-row').forEach(row => {
+      const text = (row.dataset.name + ' ' + row.dataset.url + ' ' + (row.dataset.desc || '')).toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? '' : 'none';
     });
     updateCounts();
   });
 }
 
 function updateCounts() {
-  const sCount = document.querySelectorAll('.service-card:not([style*="display: none"])').length;
-  const bCount = document.querySelectorAll('.bookmark-card:not([style*="display: none"])').length;
   const sc = document.getElementById('count-services');
   const bc = document.getElementById('count-bookmarks');
-  if (sc) sc.textContent = sCount;
-  if (bc) bc.textContent = bCount;
+  if (sc) sc.textContent = document.querySelectorAll('#grid-services [data-id]').length;
+  if (bc) bc.textContent = document.querySelectorAll('#grid-bookmarks [data-id]').length;
 }
 
 // ── Modal ────────────────────────────────────────────
 
 let editingId = null;
 
-const overlay   = () => document.getElementById('modalOverlay');
-const modal     = () => document.getElementById('modal');
-const titleEl   = () => document.getElementById('modalTitle');
-const nameInput = () => document.getElementById('mName');
-const urlInput  = () => document.getElementById('mUrl');
-const iconInput = () => document.getElementById('mIcon');
-const descInput = () => document.getElementById('mDesc');
+const overlay      = () => document.getElementById('modalOverlay');
+const modal        = () => document.getElementById('modal');
+const titleEl      = () => document.getElementById('modalTitle');
+const nameInput    = () => document.getElementById('mName');
+const urlInput     = () => document.getElementById('mUrl');
+const iconInput    = () => document.getElementById('mIcon');
+const categoryInput= () => document.getElementById('mCategory');
+const descInput    = () => document.getElementById('mDesc');
 
 function selectedType() {
   return document.querySelector('.type-btn.active')?.dataset.type || 'service';
@@ -53,10 +72,11 @@ function openModal(item = null) {
   const type = item ? item.type : 'service';
   document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active');
 
-  nameInput().value = item?.name || '';
-  urlInput().value  = item?.url  || '';
-  iconInput().value = item?.icon || '';
-  descInput().value = item?.desc || '';
+  nameInput().value     = item?.name     || '';
+  urlInput().value      = item?.url      || '';
+  iconInput().value     = item?.icon     || '';
+  categoryInput().value = item?.category || '';
+  descInput().value     = item?.desc     || '';
 
   overlay().classList.add('open');
   setTimeout(() => nameInput().focus(), 50);
@@ -82,6 +102,7 @@ async function saveItem() {
     name,
     url,
     icon:        iconInput().value.trim(),
+    category:    categoryInput()?.value.trim() ?? '',
     description: descInput().value.trim(),
     type:        selectedType(),
   };
@@ -113,8 +134,8 @@ async function deleteItem(id) {
 function refreshEmpty() {
   const es = document.getElementById('empty-services');
   const eb = document.getElementById('empty-bookmarks');
-  if (es) es.style.display = document.querySelectorAll('.service-card').length ? 'none' : '';
-  if (eb) eb.style.display = document.querySelectorAll('.bookmark-card').length ? 'none' : '';
+  if (es) es.style.display = document.querySelectorAll('#grid-services [data-id]').length ? 'none' : '';
+  if (eb) eb.style.display = document.querySelectorAll('#grid-bookmarks [data-id]').length ? 'none' : '';
 }
 
 // ── Greeting + clock ─────────────────────────────────
@@ -267,16 +288,38 @@ function initWeather() {
 // ── Drag and drop ────────────────────────────────────
 
 let _dragCard = null;
+let _dragH = 0;
 let _placeholder = null;
+let _lastRef = undefined;
 
-function getPlaceholder(refCard) {
+function collapseCard(card) {
+  card.style.height = '0';
+  card.style.minHeight = '0';
+  card.style.paddingTop = '0';
+  card.style.paddingBottom = '0';
+  card.style.overflow = 'hidden';
+  card.style.opacity = '0';
+  card.style.pointerEvents = 'none';
+}
+
+function restoreCard(card) {
+  card.style.height = '';
+  card.style.minHeight = '';
+  card.style.paddingTop = '';
+  card.style.paddingBottom = '';
+  card.style.overflow = '';
+  card.style.opacity = '';
+  card.style.pointerEvents = '';
+  card.classList.remove('dragging');
+}
+
+function getPlaceholder() {
   if (!_placeholder) {
     _placeholder = document.createElement('div');
     _placeholder.className = 'drag-placeholder';
     _placeholder.setAttribute('draggable', 'false');
   }
-  // match height of the dragged card
-  if (refCard) _placeholder.style.height = refCard.offsetHeight + 'px';
+  _placeholder.style.height = _dragH + 'px';
   return _placeholder;
 }
 
@@ -284,30 +327,32 @@ function removePlaceholder() {
   _placeholder?.remove();
 }
 
-// Returns the card the cursor is closest to and whether to insert before it
 function insertionPoint(grid, x, y) {
-  let best = null, bestDist = Infinity, bestBefore = true;
+  let nearest = null, nearestDist = Infinity;
   for (const card of grid.querySelectorAll('[data-id]:not(.dragging)')) {
     const r = card.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const dist = Math.hypot(x - cx, y - cy);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = card;
-      bestBefore = x < cx || (Math.abs(x - cx) < r.width * 0.15 && y < cy);
-    }
+    if (r.height === 0) continue;
+    const dist = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+    if (dist < nearestDist) { nearestDist = dist; nearest = card; }
   }
-  return { card: best, before: bestBefore };
+  if (!nearest) return { card: null, before: false };
+  const r = nearest.getBoundingClientRect();
+  return { card: nearest, before: x < r.left + r.width / 2 };
 }
 
 async function saveOrder() {
   const items = [];
-  document.querySelectorAll('#grid-services [data-id]').forEach((el, i) => {
-    items.push({ id: parseInt(el.dataset.id), position: i, type: 'service' });
+  document.querySelectorAll('#grid-services .category-group').forEach(group => {
+    const cat = group.dataset.category || '';
+    group.querySelectorAll('[data-id]').forEach((el, i) => {
+      items.push({ id: parseInt(el.dataset.id), position: i, type: 'service', category: cat });
+    });
   });
-  document.querySelectorAll('#grid-bookmarks [data-id]').forEach((el, i) => {
-    items.push({ id: parseInt(el.dataset.id), position: i, type: 'bookmark' });
+  document.querySelectorAll('#grid-bookmarks .category-group').forEach(group => {
+    const cat = group.dataset.category || '';
+    group.querySelectorAll('[data-id]').forEach((el, i) => {
+      items.push({ id: parseInt(el.dataset.id), position: i, type: 'bookmark', category: cat });
+    });
   });
   await fetch('/api/items/reorder', {
     method: 'POST',
@@ -318,19 +363,22 @@ async function saveOrder() {
 
 function initDrag() {
   document.addEventListener('dragstart', e => {
-    const card = e.target.closest('[data-id]');
-    if (!card || e.target.closest('button')) { if (e.target.closest('button')) e.preventDefault(); return; }
-    _dragCard = card;
+    const row = e.target.closest('[data-id]');
+    if (!row || e.target.closest('button')) { if (e.target.closest('button')) e.preventDefault(); return; }
+    _dragCard = row;
+    _dragH = row.offsetHeight;
     e.dataTransfer.effectAllowed = 'move';
-    requestAnimationFrame(() => card.classList.add('dragging'));
+    requestAnimationFrame(() => collapseCard(row));
   });
 
   document.addEventListener('dragend', () => {
-    _dragCard?.classList.remove('dragging');
+    if (_dragCard) restoreCard(_dragCard);
     removePlaceholder();
     _dragCard = null;
+    _lastRef = undefined;
   });
 
+  // Use event delegation on each top-level grid
   for (const gridId of ['grid-services', 'grid-bookmarks']) {
     const grid = document.getElementById(gridId);
     if (!grid) continue;
@@ -339,31 +387,29 @@ function initDrag() {
     grid.addEventListener('dragover', e => {
       e.preventDefault();
       if (!_dragCard) return;
-      const ph = getPlaceholder(_dragCard);
-      const { card, before } = insertionPoint(grid, e.clientX, e.clientY);
-      if (!card) {
-        grid.insertBefore(ph, grid.querySelector('.empty-placeholder'));
-      } else if (before) {
-        grid.insertBefore(ph, card);
-      } else {
-        grid.insertBefore(ph, card.nextSibling);
-      }
+      // Find the category-items container under the cursor
+      const container = e.target.closest('.category-items');
+      if (!container) return;
+      const { card, before } = insertionPoint(container, e.clientX, e.clientY);
+      const ref = card ? (before ? card : card.nextSibling) : null;
+      if (ref === _lastRef && _placeholder?.parentNode === container) return;
+      _lastRef = ref;
+      container.insertBefore(getPlaceholder(), ref);
     });
 
     grid.addEventListener('drop', e => {
       e.preventDefault();
       if (!_dragCard) return;
       const ph = _placeholder;
-      if (ph && ph.parentNode === grid) {
-        grid.insertBefore(_dragCard, ph);
-      } else {
-        grid.appendChild(_dragCard);
+      const container = ph?.parentNode;
+      if (container?.classList.contains('category-items')) {
+        container.insertBefore(_dragCard, ph);
+        // update data-category to match new group
+        const newCat = container.closest('.category-group')?.dataset.category || '';
+        _dragCard.dataset.category = newCat;
       }
-      removePlaceholder();
       if (_dragCard.dataset.type !== newType) {
         _dragCard.dataset.type = newType;
-        _dragCard.classList.toggle('service-card',  newType === 'service');
-        _dragCard.classList.toggle('bookmark-card', newType === 'bookmark');
       }
       refreshEmpty();
       updateCounts();
@@ -402,18 +448,17 @@ function init() {
     });
   });
 
-  // Card edit / delete
+  // Item clicks: edit, delete, navigate
   document.addEventListener('click', e => {
     const editBtn = e.target.closest('.edit-btn');
     if (editBtn) {
-      e.preventDefault();
       const card = editBtn.closest('[data-id]');
       openModal({
         id:       card.dataset.id,
         name:     card.dataset.name,
         url:      card.dataset.url,
         icon:     card.dataset.icon,
-        category: card.dataset.category,
+        category: card.dataset.category ?? '',
         desc:     card.dataset.desc,
         type:     card.dataset.type,
       });
@@ -421,10 +466,13 @@ function init() {
     }
     const delBtn = e.target.closest('.delete-btn');
     if (delBtn) {
-      e.preventDefault();
       const card = delBtn.closest('[data-id]');
       deleteItem(card.dataset.id);
+      return;
     }
+    // Navigate on row click
+    const row = e.target.closest('.item-row[data-url]');
+    if (row) window.open(row.dataset.url, '_blank', 'noopener');
   });
 
   // Keyboard shortcuts: S = add Service, B = add Bookmark, N/A = open (default Service)
