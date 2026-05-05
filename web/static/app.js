@@ -32,14 +32,13 @@ function updateCounts() {
 
 let editingId = null;
 
-const overlay      = () => document.getElementById('modalOverlay');
-const modal        = () => document.getElementById('modal');
-const titleEl      = () => document.getElementById('modalTitle');
-const nameInput    = () => document.getElementById('mName');
-const urlInput     = () => document.getElementById('mUrl');
-const iconInput    = () => document.getElementById('mIcon');
-const categoryInput= () => document.getElementById('mCategory');
-const descInput    = () => document.getElementById('mDesc');
+const overlay   = () => document.getElementById('modalOverlay');
+const modal     = () => document.getElementById('modal');
+const titleEl   = () => document.getElementById('modalTitle');
+const nameInput = () => document.getElementById('mName');
+const urlInput  = () => document.getElementById('mUrl');
+const iconInput = () => document.getElementById('mIcon');
+const descInput = () => document.getElementById('mDesc');
 
 function selectedType() {
   return document.querySelector('.type-btn.active')?.dataset.type || 'service';
@@ -54,11 +53,10 @@ function openModal(item = null) {
   const type = item ? item.type : 'service';
   document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active');
 
-  nameInput().value     = item?.name     || '';
-  urlInput().value      = item?.url      || '';
-  iconInput().value     = item?.icon     || '';
-  categoryInput().value = item?.category || '';
-  descInput().value     = item?.desc     || '';
+  nameInput().value = item?.name || '';
+  urlInput().value  = item?.url  || '';
+  iconInput().value = item?.icon || '';
+  descInput().value = item?.desc || '';
 
   overlay().classList.add('open');
   setTimeout(() => nameInput().focus(), 50);
@@ -84,7 +82,6 @@ async function saveItem() {
     name,
     url,
     icon:        iconInput().value.trim(),
-    category:    categoryInput().value.trim(),
     description: descInput().value.trim(),
     type:        selectedType(),
   };
@@ -270,21 +267,38 @@ function initWeather() {
 // ── Drag and drop ────────────────────────────────────
 
 let _dragCard = null;
+let _placeholder = null;
 
-function clearDropClasses() {
-  document.querySelectorAll('.drop-before, .drop-after').forEach(el => {
-    el.classList.remove('drop-before', 'drop-after');
-  });
+function getPlaceholder(refCard) {
+  if (!_placeholder) {
+    _placeholder = document.createElement('div');
+    _placeholder.className = 'drag-placeholder';
+    _placeholder.setAttribute('draggable', 'false');
+  }
+  // match height of the dragged card
+  if (refCard) _placeholder.style.height = refCard.offsetHeight + 'px';
+  return _placeholder;
 }
 
-function nearestCard(grid, x, y) {
-  let best = null, bestDist = Infinity;
+function removePlaceholder() {
+  _placeholder?.remove();
+}
+
+// Returns the card the cursor is closest to and whether to insert before it
+function insertionPoint(grid, x, y) {
+  let best = null, bestDist = Infinity, bestBefore = true;
   for (const card of grid.querySelectorAll('[data-id]:not(.dragging)')) {
     const r = card.getBoundingClientRect();
-    const dist = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
-    if (dist < bestDist) { bestDist = dist; best = card; }
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dist = Math.hypot(x - cx, y - cy);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = card;
+      bestBefore = x < cx || (Math.abs(x - cx) < r.width * 0.15 && y < cy);
+    }
   }
-  return best;
+  return { card: best, before: bestBefore };
 }
 
 async function saveOrder() {
@@ -305,9 +319,7 @@ async function saveOrder() {
 function initDrag() {
   document.addEventListener('dragstart', e => {
     const card = e.target.closest('[data-id]');
-    if (!card) return;
-    // don't drag when clicking buttons
-    if (e.target.closest('button')) { e.preventDefault(); return; }
+    if (!card || e.target.closest('button')) { if (e.target.closest('button')) e.preventDefault(); return; }
     _dragCard = card;
     e.dataTransfer.effectAllowed = 'move';
     requestAnimationFrame(() => card.classList.add('dragging'));
@@ -315,7 +327,7 @@ function initDrag() {
 
   document.addEventListener('dragend', () => {
     _dragCard?.classList.remove('dragging');
-    clearDropClasses();
+    removePlaceholder();
     _dragCard = null;
   });
 
@@ -327,38 +339,32 @@ function initDrag() {
     grid.addEventListener('dragover', e => {
       e.preventDefault();
       if (!_dragCard) return;
-      clearDropClasses();
-      const near = nearestCard(grid, e.clientX, e.clientY);
-      if (!near || near === _dragCard) return;
-      const r = near.getBoundingClientRect();
-      const before = grid.id === 'grid-services'
-        ? e.clientX < r.left + r.width / 2
-        : e.clientY < r.top + r.height / 2;
-      near.classList.add(before ? 'drop-before' : 'drop-after');
+      const ph = getPlaceholder(_dragCard);
+      const { card, before } = insertionPoint(grid, e.clientX, e.clientY);
+      if (!card) {
+        grid.insertBefore(ph, grid.querySelector('.empty-placeholder'));
+      } else if (before) {
+        grid.insertBefore(ph, card);
+      } else {
+        grid.insertBefore(ph, card.nextSibling);
+      }
     });
 
     grid.addEventListener('drop', e => {
       e.preventDefault();
       if (!_dragCard) return;
-      clearDropClasses();
-
-      const near = nearestCard(grid, e.clientX, e.clientY);
-      if (!near || near === _dragCard) {
-        grid.insertBefore(_dragCard, grid.querySelector('.empty-placeholder'));
+      const ph = _placeholder;
+      if (ph && ph.parentNode === grid) {
+        grid.insertBefore(_dragCard, ph);
       } else {
-        const r = near.getBoundingClientRect();
-        const before = grid.id === 'grid-services'
-          ? e.clientX < r.left + r.width / 2
-          : e.clientY < r.top + r.height / 2;
-        grid.insertBefore(_dragCard, before ? near : near.nextSibling);
+        grid.appendChild(_dragCard);
       }
-
+      removePlaceholder();
       if (_dragCard.dataset.type !== newType) {
         _dragCard.dataset.type = newType;
         _dragCard.classList.toggle('service-card',  newType === 'service');
         _dragCard.classList.toggle('bookmark-card', newType === 'bookmark');
       }
-
       refreshEmpty();
       updateCounts();
       saveOrder();
