@@ -417,9 +417,13 @@ html, body {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 40px 60px;
+  grid-template-columns: 1fr;
+  gap: 32px;
   margin-top: 16px;
+}
+
+.category-grid.two-col {
+  grid-template-columns: 1fr 1fr;
 }
 
 .category-group {
@@ -440,8 +444,8 @@ html, body {
 
 .category-items {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* ── Item rows ────────────────────────────────────── */
@@ -449,17 +453,18 @@ html, body {
 .item-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   color: var(--text);
-  padding: 10px 8px;
+  padding: 10px 12px;
   cursor: grab;
   position: relative;
   border-radius: var(--radius-md);
-  transition: background 0.12s, transform 0.12s;
+  transition: background 0.12s;
   user-select: none;
+  flex: 0 0 auto;
 }
 
-.item-row:hover { background: var(--surface-2); transform: translateX(2px); }
+.item-row:hover { background: var(--surface-2); }
 .item-row:active { cursor: grabbing; }
 .item-row.dragging { opacity: 0; }
 .item-row:hover .item-actions { opacity: 1; }

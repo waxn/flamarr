@@ -413,6 +413,7 @@ function initDrag() {
       }
       refreshEmpty();
       updateCounts();
+      initColumns();
       saveOrder();
     });
   }
@@ -420,12 +421,22 @@ function initDrag() {
 
 // ── Event wiring ─────────────────────────────────────
 
+function initColumns() {
+  ['grid-services', 'grid-bookmarks'].forEach(id => {
+    const grid = document.getElementById(id);
+    if (!grid) return;
+    const count = grid.querySelectorAll('[data-id]').length;
+    grid.classList.toggle('two-col', count > 7);
+  });
+}
+
 function init() {
   initIcons();
   initSearch();
   initClock();
   initWeather();
   initDrag();
+  initColumns();
 
   // Open button
   document.getElementById('openModal')?.addEventListener('click', () => openModal());
